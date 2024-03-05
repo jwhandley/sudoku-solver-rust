@@ -76,6 +76,20 @@ fn solve_recursive(board: Board) -> Option<Board> {
     }
 }
 
+fn parse_grid(input: &str) -> [[u8; 9]; 9] {
+    let mut grid = [[0; 9]; 9];
+    // Input is an 81 char sequence with 1-9 and . as empty cells
+    for (i, c) in input.chars().enumerate() {
+        let row = i / 9;
+        let col = i % 9;
+        grid[row][col] = match c {
+            '1'..='9' => c.to_digit(10).unwrap() as u8,
+            _ => 0,
+        };
+    }
+    grid
+}
+
 fn main() {
     // let grid = [
     //     [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -89,17 +103,21 @@ fn main() {
     //     [0, 0, 0, 0, 4, 0, 0, 0, 9],
     // ];
 
-    let grid = [
-        [5, 3, 0, 0, 7, 0, 0, 0, 0],
-        [6, 0, 0, 1, 9, 5, 0, 0, 0],
-        [0, 9, 8, 0, 0, 0, 0, 6, 0],
-        [8, 0, 0, 0, 6, 0, 0, 0, 3],
-        [4, 0, 0, 8, 0, 3, 0, 0, 1],
-        [7, 0, 0, 0, 2, 0, 0, 0, 6],
-        [0, 6, 0, 0, 0, 0, 2, 8, 0],
-        [0, 0, 0, 4, 1, 9, 0, 0, 5],
-        [0, 0, 0, 0, 8, 0, 0, 7, 9],
-    ];
+    // let grid = [
+    //     [5, 3, 0, 0, 7, 0, 0, 0, 0],
+    //     [6, 0, 0, 1, 9, 5, 0, 0, 0],
+    //     [0, 9, 8, 0, 0, 0, 0, 6, 0],
+    //     [8, 0, 0, 0, 6, 0, 0, 0, 3],
+    //     [4, 0, 0, 8, 0, 3, 0, 0, 1],
+    //     [7, 0, 0, 0, 2, 0, 0, 0, 6],
+    //     [0, 6, 0, 0, 0, 0, 2, 8, 0],
+    //     [0, 0, 0, 4, 1, 9, 0, 0, 5],
+    //     [0, 0, 0, 0, 8, 0, 0, 7, 9],
+    // ];
+
+    // Get grid from command line
+    let args: Vec<String> = std::env::args().collect();
+    let grid = parse_grid(&args[1]);
 
     let start_time = std::time::Instant::now();
     let solution = solve(grid).unwrap();
