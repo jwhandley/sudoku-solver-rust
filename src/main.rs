@@ -12,7 +12,8 @@ struct EmptyCell {
 
 impl Ord for EmptyCell {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.valid_moves.len().cmp(&other.valid_moves.len())
+        // Min heap
+        other.valid_moves.len().cmp(&self.valid_moves.len())
     }
 }
 
@@ -22,7 +23,7 @@ struct Board {
     row_contains: [u16; 9],
     col_contains: [u16; 9],
     box_contains: [u16; 9],
-    empty_cells: BinaryHeap<EmptyCell>,
+    empty_cells: Vec<(usize, usize)>,
 }
 
 impl Board {
@@ -32,14 +33,13 @@ impl Board {
             row_contains: [0; 9],
             col_contains: [0; 9],
             box_contains: [0; 9],
-            empty_cells: BinaryHeap::new(),
+            empty_cells: Vec::new(),
         };
 
-        let mut empty_cells = Vec::new();
         for row in 0..9 {
             for col in 0..9 {
                 match board.grid[row][col] {
-                    0 => empty_cells.push((row, col)),
+                    0 => board.empty_cells.push((row, col)),
                     value => {
                         let bit = 1 << (value - 1);
                         board.row_contains[row] |= bit;
@@ -48,15 +48,6 @@ impl Board {
                     }
                 }
             }
-        }
-
-        for (row, col) in empty_cells {
-            let valid_moves = board.valid_moves(row, col).collect();
-            board.empty_cells.push(EmptyCell {
-                row,
-                col,
-                valid_moves,
-            });
         }
 
         board
@@ -96,15 +87,11 @@ fn solve(grid: [[u8; 9]; 9]) -> Option<[[u8; 9]; 9]> {
 }
 
 fn solve_recursive(board: Board) -> Option<Board> {
-    match board.empty_cells.peek() {
+    match board.empty_cells.last() {
         None => Some(board.clone()),
-        Some(EmptyCell {
-            row,
-            col,
-            valid_moves,
-        }) => valid_moves
-            .iter()
-            .find_map(|&value| solve_recursive(board.make_move(*row, *col, value))),
+        Some((row, col)) => board
+            .valid_moves(*row, *col)
+            .find_map(|value| solve_recursive(board.make_move(*row, *col, value))),
     }
 }
 
@@ -123,17 +110,26 @@ fn parse_grid(input: &str) -> [[u8; 9]; 9] {
 }
 
 fn main() {
-    // let default_grid = [
-    //     [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 0, 3, 0, 8, 5],
-    //     [0, 0, 1, 0, 2, 0, 0, 0, 0],
-    //     [0, 0, 0, 5, 0, 7, 0, 0, 0],
-    //     [0, 0, 4, 0, 0, 0, 1, 0, 0],
-    //     [0, 9, 0, 0, 0, 0, 0, 0, 0],
-    //     [5, 0, 0, 0, 0, 0, 0, 7, 3],
-    //     [0, 0, 2, 0, 1, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 4, 0, 0, 0, 9],
-    // ];
+    let default_grid = [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 3, 0, 8, 5],
+        [0, 0, 1, 0, 2, 0, 0, 0, 0],
+        [0, 0, 0, 5, 0, 7, 0, 0, 0],
+        [0, 0, 4, 0, 0, 0, 1, 0, 0],
+        [0, 9, 0, 0, 0, 0, 0, 0, 0],
+        [5, 0, 0, 0, 0, 0, 0, 7, 3],
+        [0, 0, 2, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 4, 0, 0, 0, 9],
+    ];
+
+    let start_time = std::time::Instant::now();
+    let solution = solve(default_grid).unwrap();
+    let elapsed = start_time.elapsed();
+    println!("Time: {:?}", elapsed);
+
+    for row in solution.iter() {
+        println!("{:?}", row);
+    }
 
     // let default_grid = [
     //     [5, 3, 0, 0, 7, 0, 0, 0, 0],
