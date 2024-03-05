@@ -1,10 +1,28 @@
+use indicatif::ParallelProgressIterator;
+use rayon::prelude::*;
+use std::collections::BinaryHeap;
+use std::time::Duration;
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+struct EmptyCell {
+    row: usize,
+    col: usize,
+    valid_moves: Vec<u8>,
+}
+
+impl Ord for EmptyCell {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.valid_moves.len().cmp(&other.valid_moves.len())
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Board {
     grid: [[u8; 9]; 9],
     row_contains: [u16; 9],
     col_contains: [u16; 9],
     box_contains: [u16; 9],
-    empty_cells: Vec<(usize, usize)>,
+    empty_cells: BinaryHeap<EmptyCell>,
 }
 
 impl Board {
@@ -14,13 +32,14 @@ impl Board {
             row_contains: [0; 9],
             col_contains: [0; 9],
             box_contains: [0; 9],
-            empty_cells: Vec::new(),
+            empty_cells: BinaryHeap::new(),
         };
 
+        let mut empty_cells = Vec::new();
         for row in 0..9 {
             for col in 0..9 {
                 match board.grid[row][col] {
-                    0 => board.empty_cells.push((row, col)),
+                    0 => empty_cells.push((row, col)),
                     value => {
                         let bit = 1 << (value - 1);
                         board.row_contains[row] |= bit;
@@ -29,6 +48,15 @@ impl Board {
                     }
                 }
             }
+        }
+
+        for (row, col) in empty_cells {
+            let valid_moves = board.valid_moves(row, col).collect();
+            board.empty_cells.push(EmptyCell {
+                row,
+                col,
+                valid_moves,
+            });
         }
 
         board
@@ -68,11 +96,15 @@ fn solve(grid: [[u8; 9]; 9]) -> Option<[[u8; 9]; 9]> {
 }
 
 fn solve_recursive(board: Board) -> Option<Board> {
-    match board.empty_cells.last().copied() {
-        None => Some(board),
-        Some((row, col)) => board
-            .valid_moves(row, col)
-            .find_map(|value| solve_recursive(board.make_move(row, col, value))),
+    match board.empty_cells.peek() {
+        None => Some(board.clone()),
+        Some(EmptyCell {
+            row,
+            col,
+            valid_moves,
+        }) => valid_moves
+            .iter()
+            .find_map(|&value| solve_recursive(board.make_move(*row, *col, value))),
     }
 }
 
@@ -91,7 +123,7 @@ fn parse_grid(input: &str) -> [[u8; 9]; 9] {
 }
 
 fn main() {
-    // let grid = [
+    // let default_grid = [
     //     [0, 0, 0, 0, 0, 0, 0, 0, 0],
     //     [0, 0, 0, 0, 0, 3, 0, 8, 5],
     //     [0, 0, 1, 0, 2, 0, 0, 0, 0],
@@ -103,7 +135,7 @@ fn main() {
     //     [0, 0, 0, 0, 4, 0, 0, 0, 9],
     // ];
 
-    // let grid = [
+    // let default_grid = [
     //     [5, 3, 0, 0, 7, 0, 0, 0, 0],
     //     [6, 0, 0, 1, 9, 5, 0, 0, 0],
     //     [0, 9, 8, 0, 0, 0, 0, 6, 0],
@@ -115,16 +147,29 @@ fn main() {
     //     [0, 0, 0, 0, 8, 0, 0, 7, 9],
     // ];
 
-    // Get grid from command line
-    let args: Vec<String> = std::env::args().collect();
-    let grid = parse_grid(&args[1]);
+    let grids = include_str!("../sudoku10k.txt")
+        .lines()
+        .map(parse_grid)
+        .collect::<Vec<_>>();
 
-    let start_time = std::time::Instant::now();
-    let solution = solve(grid).unwrap();
-    let elapsed = start_time.elapsed();
+    let times: Vec<Duration> = grids
+        .par_iter()
+        .progress()
+        .map(|&grid| {
+            let start_time = std::time::Instant::now();
+            let _ = solve(grid).unwrap();
+            start_time.elapsed()
+        })
+        .collect();
 
-    println!("Found solution in {:#?}", elapsed);
-    for row in solution.iter() {
-        println!("{:?}", row);
-    }
+    let total_time: Duration = times.iter().sum();
+    let average_time = total_time / times.len() as u32;
+
+    println!("Average time: {:?}", average_time);
+
+    let max_time = times.iter().max().unwrap();
+    let min_time = times.iter().min().unwrap();
+
+    println!("Max time: {:?}", max_time);
+    println!("Min time: {:?}", min_time);
 }
