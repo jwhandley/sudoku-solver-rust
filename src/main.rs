@@ -2,20 +2,6 @@ use indicatif::ParallelProgressIterator;
 use rayon::prelude::*;
 use std::time::Duration;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
-struct EmptyCell {
-    row: usize,
-    col: usize,
-    valid_moves: Vec<u8>,
-}
-
-impl Ord for EmptyCell {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Min heap
-        other.valid_moves.len().cmp(&self.valid_moves.len())
-    }
-}
-
 #[derive(Debug, Clone)]
 struct Board {
     grid: [[u8; 9]; 9],
