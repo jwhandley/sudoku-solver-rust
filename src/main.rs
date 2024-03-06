@@ -1,6 +1,5 @@
 use indicatif::ParallelProgressIterator;
 use rayon::prelude::*;
-use std::collections::BinaryHeap;
 use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
